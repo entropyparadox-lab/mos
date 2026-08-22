@@ -1,0 +1,53 @@
+# ==============================================================================
+# MOS (MicroVM Operating Service) Configuration Template
+# Copy this file to `mos.toml` in your project root to customize deployment.
+# Note: All fields are optional. MOS operates in Zero-Config mode by default.
+# ==============================================================================
+
+[app]
+name = "my-vibe-app"                 # Application name (defaults to folder name)
+version = "0.1.0"
+# provider = "node"                  # "node" | "python" | "rust" | "go" | "static"
+# build_command = "npm run build"    # Custom build command override
+# start_command = "npm run start"    # Custom start command override
+
+[resources]
+vcpu = 1                             # Virtual CPU cores (default: 1)
+memory_mib = 256                     # RAM size in MiB (default: 128)
+# gpu_vram_mib = 8192                # Scale-to-Zero GPU VRAM allocation (MiB)
+
+[network]
+port = 3000                          # Guest application listening port
+domain = "app.mos.local"             # Ingress routing domain
+tls = "auto"                         # "auto" | "self-signed" | "off"
+
+# Outbound (Egress) Firewall Mode:
+#  - "allow-all": Full outbound internet access (Default - GA, Sentry, external APIs)
+#  - "whitelist-only": Drops all external traffic except `allowed_outbound`
+egress = "allow-all"
+
+# Egress whitelist (used when egress = "whitelist-only")
+allowed_outbound = [
+    "o12345.ingest.sentry.io",
+    "www.google-analytics.com",
+    "generativelanguage.googleapis.com",
+    "api.openai.com",
+    "api.anthropic.com"
+]
+
+[storage.litestream]
+enabled = true                       # Auto-replicates SQLite database
+db_path = "app.db"                   # SQLite file path
+replica_type = "s3"                  # "s3" | "gcs" | "abs"
+bucket = "my-app-backups"            # S3 / Cloudflare R2 bucket name
+# s3_endpoint = "https://<account-id>.r2.cloudflarestorage.com"
+
+[scaling]
+idle_timeout_seconds = 300           # Inactive duration before memory snapshot
+strategy = "uffd"                    # "uffd" (1.2ms lazy) or "snapshot" (6.5ms full)
+min_instances = 0                    # 0 = True Scale-to-Zero
+max_instances = 5                    # Autoscaling ceiling
+
+[env]
+NODE_ENV = "production"
+LOG_LEVEL = "info"

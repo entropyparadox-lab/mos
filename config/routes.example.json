@@ -1,0 +1,29 @@
+{
+  "routes": {
+    "app.example.com": {
+      "host": "127.0.0.1",
+      "port": 8080,
+      "is_suspended": false
+    },
+    "api.example.com": {
+      "host": "127.0.0.1",
+      "port": 8000,
+      "is_suspended": false
+    },
+    "auth.example.com": {
+      "host": "127.0.0.1",
+      "port": 3000,
+      "is_suspended": false
+    },
+    "docs.example.com": {
+      "host": "127.0.0.1",
+      "port": 4000,
+      "is_suspended": false
+    },
+    "worker.example.com": {
+      "host": "127.0.0.1",
+      "port": 8085,
+      "is_suspended": true
+    }
+  }
+}

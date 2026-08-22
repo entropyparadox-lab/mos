@@ -1,0 +1,53 @@
+[workspace]
+members = [
+    "crates/mos-core",
+    "crates/mos-orchestrator",
+    "crates/mos-edge",
+    "crates/mos-builder",
+    "crates/mos-cli",
+    "crates/mos-init",
+    "crates/mos-cluster",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Entropy Paradox Lab <contact@entropyparadox.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/entropyparadox-lab/mos"
+homepage = "https://github.com/entropyparadox-lab/mos"
+
+[workspace.dependencies]
+mos-core = { version = "0.1.0", package = "m-os-core", path = "crates/mos-core" }
+mos-orchestrator = { version = "0.1.0", package = "m-os-orchestrator", path = "crates/mos-orchestrator" }
+mos-edge = { version = "0.1.0", package = "m-os-edge", path = "crates/mos-edge" }
+mos-builder = { version = "0.1.0", package = "m-os-builder", path = "crates/mos-builder" }
+mos-init = { version = "0.1.0", package = "m-os-init", path = "crates/mos-init" }
+mos-cluster = { version = "0.1.0", package = "m-os-cluster", path = "crates/mos-cluster" }
+
+tokio = { version = "1.38", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "1.0"
+anyhow = "1.0"
+hyper = { version = "1.4", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
+http-body-util = "0.1"
+bytes = "1.6"
+uuid = { version = "1.8", features = ["v4", "serde"] }
+clap = { version = "4.5", features = ["derive", "env"] }
+nix = { version = "0.29", features = ["process", "signal", "net", "mount", "fs", "socket", "ioctl"] }
+reqwest = { version = "0.12", features = ["json"] }
+dashmap = "5.5"
+axum = "0.7"
+tempfile = "3.10"
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+tower = { version = "0.5", features = ["util"] }
+zstd = "0.13"
+ed25519-dalek = { version = "2.1", default-features = false, features = ["std", "rand_core"] }
+rand_core = { version = "0.6", features = ["std", "getrandom"] }

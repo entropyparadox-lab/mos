@@ -1,0 +1,46 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Binary tools & Hypervisor assets
+/bin/firecracker
+/bin/jailer
+/bin/nixpacks
+/bin/vmlinux*
+/bin/*.ext4
+
+# Local MicroVM runtime, sockets & state
+/runtime/
+/run/
+*.sock
+*.snap
+*.mem
+*.ext4
+*.bin
+*.raw
+
+# Local environment & private server configs
+.env
+.env.*
+*.local.json
+*.local.toml
+config/routes.json
+config/routes.local.json
+config/*.local.json
+mos.local.toml
+publish_all.py
+
+# Logs & profiling
+*.log
+/logs/
+*.profdata
+*.profraw
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

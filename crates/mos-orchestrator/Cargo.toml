@@ -1,0 +1,31 @@
+[package]
+name = "m-os-orchestrator"
+description = "Firecracker MicroVM lifecycle engine, userfaultfd lazy-restore, memory snapshotting, and cgroup resource isolation for MOS"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+mos-core.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+http-body-util.workspace = true
+bytes.workspace = true
+nix.workspace = true
+dashmap.workspace = true
+zstd.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+mos-builder.workspace = true
+tempfile.workspace = true

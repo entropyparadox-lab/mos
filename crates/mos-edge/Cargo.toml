@@ -1,0 +1,30 @@
+[package]
+name = "m-os-edge"
+description = "Hyper edge ingress reverse proxy, ACME TLS, canary rollout, eBPF XDP filter, and wake-on-http packet buffer for MOS"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+mos-core.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+http-body-util.workspace = true
+bytes.workspace = true
+dashmap.workspace = true
+uuid.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+hex.workspace = true
+
+[dev-dependencies]
+reqwest.workspace = true

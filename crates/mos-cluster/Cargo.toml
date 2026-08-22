@@ -1,0 +1,21 @@
+[package]
+name = "m-os-cluster"
+description = "Multi-node SWIM gossip membership, consistent hash ring, and global edge ingress routing for MOS"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+mos-core.workspace = true
+mos-edge.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+dashmap.workspace = true
+bytes.workspace = true
