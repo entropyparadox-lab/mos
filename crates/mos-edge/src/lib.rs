@@ -1,3 +1,4 @@
+pub mod ambient_pool;
 pub mod canary_pipeline;
 pub mod ebpf_filter;
 pub mod proxy;
@@ -6,6 +7,9 @@ pub mod telemetry;
 pub mod tls;
 pub mod webhook;
 
+pub use ambient_pool::{
+    AmbientConnection, AmbientPoolConfig, AmbientPoolManager, StatefulProtocol,
+};
 pub use canary_pipeline::{
     CanaryPipelineConfig, CanaryPipelineManager, PipelineEvaluation, PipelineStatus,
 };
