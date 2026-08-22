@@ -2,8 +2,7 @@
 
 # 🦀 MOS (MicroVM Operating Service)
 
-**A lightweight, hyper-dense, scale-to-zero serverless platform built on Linux KVM & Firecracker MicroVMs.**  
-*Vibe Coders 및 고성능 클라우드 워크로드를 위한 Rust 네이티브 초경량·초고밀도 Scale-to-Zero PaaS*
+**A lightweight, hyper-dense, scale-to-zero serverless platform built on Linux KVM & Firecracker MicroVMs.**
 
 [![CI](https://github.com/entropyparadox-lab/mos/actions/workflows/ci.yml/badge.svg)](https://github.com/entropyparadox-lab/mos/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
@@ -11,7 +10,9 @@
 [![Platform](https://img.shields.io/badge/platform-Linux%20x86__64%20(KVM)-lightgrey.svg)](https://kernel.org)
 [![Latency](https://img.shields.io/badge/Wake--on--HTTP-%3C%207.00ms-success.svg)](docs/BENCHMARK_REPORT.md)
 
-[English](#overview) • [한국어](#개요) • [Quickstart](#quickstart) • [Architecture](#architecture) • [Benchmarks](#measured-benchmarks) • [Documentation](docs/)
+**[ English ](README.md)** • **[ 한국어 ](README.ko.md)** • **[ 日本語 ](README.ja.md)** • **[ 简体中文 ](README.zh.md)**
+
+[Overview](#overview) • [Key Features](#-key-features) • [Measured Benchmarks](#-measured-benchmarks) • [Architecture](#%EF%B8%8F-architecture) • [Quickstart](#-quickstart) • [Configuration](#%EF%B8%8F-configuration-mostoml) • [Documentation](docs/)
 
 </div>
 
@@ -19,17 +20,9 @@
 
 ## Overview
 
-**MOS (MicroVM Operating Service)** is a next-generation, Rust-native serverless runtime and edge hosting platform. It provides instant application deployments from source code without Dockerfiles, guarantees hardware-enforced isolation through Linux KVM and AWS Firecracker MicroVMs, and scales idle workloads completely down to **0 MB RAM & 0 MB VRAM**.
+**MOS (MicroVM Operating Service)** is a next-generation, Rust-native serverless runtime and edge hosting platform. It provides instant application deployments directly from source code without Dockerfiles, guarantees hardware-enforced isolation via Linux KVM and AWS Firecracker MicroVMs, and scales idle workloads completely down to **0 MB RAM & 0 MB GPU VRAM**.
 
-When incoming HTTP traffic arrives for a suspended instance, MOS wakes the MicroVM within **1.20 ms (UFFD lazy restore)** or **6.57 ms (full snapshot)**, achieving sub-7ms end-to-end response delivery with zero dropped packets.
-
----
-
-## 개요
-
-**MOS**는 개발자가 `Dockerfile`이나 복잡한 Kubernetes 매니페스트 없이 소스코드만으로 수초 만에 배포할 수 있는 **초경량·초고밀도 Serverless PaaS**입니다.
-
-컨테이너 커널 공유 방식의 보안 한계를 넘어 **Linux KVM + Firecracker MicroVM** 기반의 하드웨어 레벨 가상화 경계를 제공하며, 유휴 인스턴스를 메모리 스냅샷 상태로 전환하여 **0MB RAM 및 0MB GPU VRAM**의 진정한 Scale-to-Zero를 실현합니다.
+When incoming HTTP traffic hits a suspended instance, MOS wakes the MicroVM within **1.20 ms (Userfaultfd lazy paging)** or **6.57 ms (full memory snapshot)**, achieving sub-7ms end-to-end response delivery with zero dropped packets.
 
 ---
 
@@ -37,21 +30,21 @@ When incoming HTTP traffic arrives for a suspended instance, MOS wakes the Micro
 
 | Feature | Description |
 | :--- | :--- |
-| ⚡ **Sub-7ms Wake-on-HTTP** | 유휴 시 프로세스 완전 종료(0MB), 첫 HTTP 패킷 유입 시 **1.20ms (UFFD 지연 페이징)** / **6.57ms (스냅샷 복구)** 내 즉각 기상 및 패킷 포워딩 |
-| 🔒 **Hardware-Enforced Isolation** | Linux KVM 하드웨어 가상화와 Firecracker MicroVM을 통한 커널 레벨 격리 (컨테이너 탈옥/취약점 완벽 차단) |
-| 🚀 **Zero-Config Build & Deploy** | Rust 기반 Nixpacks 엔진 통합 — Node.js, Python, Rust, Go 등을 자동 감지하여 별도 설정 없이 즉시 ext4 Rootfs 빌드 |
-| 💾 **SQLite-First & Litestream** | SQLite 파일 자동 감지 및 S3 / Cloudflare R2로 실시간 트랜잭션 스트리밍 백업 자동화 |
-| 🌐 **Sub-millisecond Edge Ingress** | Hyper/Tokio 기반 고성능 리버스 프록시, 자동 ACME/TLS, 3단계 가중치 카나리 배포 (10% ➔ 50% ➔ 100%), HMAC 무중단 롤백 |
-| 🛰️ **P2P Mesh Cluster** | SWIM Gossip 프로토콜과 일관된 해시 링(Consistent Hash Ring) 기반의 탈중앙 분산 노드 디스커버리 및 글로벌 라우팅 |
-| 🎯 **Dynamic GPU VRAM Pooling** | LLM/AI 인퍼런스 워크로드에 대한 동적 VRAM 할당 및 유휴 시 0MB 완전 반납(Scale-to-Zero GPU) |
-| 🛡️ **eBPF/XDP Defense & Ed25519 RBAC** | 커널 레벨 L4 DDoS 방어 필터 및 비대칭 암호화 서명 기반 무상태(Stateless) RBAC 인가 검증 (<0.01ms) |
-| 📊 **Real-time Metering & Credit Billing** | vCPU, RAM, VRAM, 네트워크 Egress 초단위 정밀 계량 및 잔액 소진 시 자동 서스펜드 |
+| ⚡ **Sub-7ms Wake-on-HTTP** | Complete zero-footprint (0 MB) at idle; wakes and delivers buffered HTTP requests within **1.20 ms (UFFD lazy paging)** or **6.57 ms (snapshot restore)**. |
+| 🔒 **Hardware-Enforced Isolation** | Linux KVM hardware virtualization + AWS Firecracker boundary eliminates container escape and kernel-sharing vulnerabilities. |
+| 🚀 **Zero-Config Build & Deploy** | Embedded Nixpacks engine auto-detects Node.js, Python, Rust, Go, etc., building minimal ext4 Rootfs images without `Dockerfile`s. |
+| 💾 **SQLite-First & Litestream** | Automatic SQLite detection with real-time transactional streaming backup to S3 and Cloudflare R2. |
+| 🌐 **Sub-millisecond Edge Ingress** | Hyper/Tokio-based asynchronous reverse proxy with automated ACME/TLS, 3-stage weighted canary rollouts (`10% -> 50% -> 100%`), and HMAC instant rollback. |
+| 🛰️ **P2P Mesh Cluster** | Decentralized node discovery and global cross-node routing powered by SWIM Gossip protocol and Consistent Hash Rings. |
+| 🎯 **Dynamic Scale-to-Zero GPU** | Dynamic GPU VRAM pooling for LLM inference workloads with instantaneous 0 MB VRAM release during idle periods. |
+| 🛡️ **eBPF/XDP Defense & Ed25519 RBAC** | Kernel-level L4 DDoS mitigation + stateless asymmetric cryptographic authorization tokens (<0.01 ms). |
+| 📊 **Real-time Metering & Credit Billing** | Per-second accounting of vCPU, RAM, VRAM, and network egress with automatic suspension upon balance depletion. |
 
 ---
 
 ## 📊 Measured Benchmarks
 
-실제 물리 베어메탈 서버(Linux 6.17, AMD Ryzen 7 9700X 8C/16T, KVM, NVMe SSD)에서 측정한 공인 실측 결과입니다 ([상세 벤치마크 보고서](docs/BENCHMARK_REPORT.md)).
+Measured on baremetal hardware (Linux 6.17, AMD Ryzen 7 9700X 8C/16T, KVM AMD-V, NVMe SSD) — see [Full Benchmark Report](docs/BENCHMARK_REPORT.md).
 
 ```
 ┌───────────────────────────────────────────────┬─────────────────┬────────────────────────┐
@@ -74,7 +67,7 @@ When incoming HTTP traffic arrives for a suspended instance, MOS wakes the Micro
 
 ## 🏗️ Architecture
 
-MOS는 단일 모놀리스가 아닌 모듈형 Rust 워크스페이스(7개 독립 Crate)로 설계되었습니다.
+MOS is designed as a modular Rust Cargo workspace comprising 7 specialized crates.
 
 ```
                      [ Public Traffic / Clients ]
@@ -117,13 +110,13 @@ MOS는 단일 모놀리스가 아닌 모듈형 Rust 워크스페이스(7개 독�
 
 ### Workspace Crates
 
-* **[`crates/mos-core`](crates/mos-core)**: Core domain models, instance lifecycle state machine, Ed25519 RBAC authorization, credit billing engine, and ISTQB CTFL verified models.
-* **[`crates/mos-orchestrator`](crates/mos-orchestrator)**: Node-level daemon managing Firecracker processes, memory snapshots, UFFD lazy paging, Cgroup v2 quotas, GPU VRAM pooling, and shared storage volumes.
-* **[`crates/mos-edge`](crates/mos-edge)**: Sub-millisecond reverse proxy with TCP/HTTP buffering, Wake-on-HTTP IPC coordination, ACME/TLS management, and automated weighted canary rollouts.
-* **[`crates/mos-builder`](crates/mos-builder)**: Zero-config build engine integrating Nixpacks, ext4 packaging, SQLite/Litestream auto-detection, and heavy-workload native asset resolution.
-* **[`crates/mos-init`](crates/mos-init)**: Microscopic static PID 1 guest supervisor (<820KB) responsible for early VFS mounting, network link setup, zombie process reaping, and vsock IPC telemetry.
-* **[`crates/mos-cluster`](crates/mos-cluster)**: Decentralized multi-node clustering using SWIM Gossip protocol and consistent hash ring routing.
-* **[`crates/mos-cli`](crates/mos-cli)**: Developer CLI tool and Operator web dashboard (`mos deploy`, `mos host init`, `mos dashboard`, `mos edge`, `mos bench`).
+* **[`crates/mos-core`](crates/mos-core)**: Core domain models, state transition matrix, Ed25519 RBAC authorization, credit billing engine, and ISTQB CTFL test suite.
+* **[`crates/mos-orchestrator`](crates/mos-orchestrator)**: Host daemon managing Firecracker processes, snapshots, UFFD lazy paging, Cgroup v2 quotas, GPU VRAM pooling, and shared storage volumes.
+* **[`crates/mos-edge`](crates/mos-edge)**: High-throughput reverse proxy with TCP/HTTP request buffering, Wake-on-HTTP IPC signaling, ACME/TLS management, and automated weighted canary rollouts.
+* **[`crates/mos-builder`](crates/mos-builder)**: Zero-config packaging engine integrating Nixpacks, ext4 rootfs builder, SQLite/Litestream replication injector, and heavy native typesetting analyzer.
+* **[`crates/mos-init`](crates/mos-init)**: Static PID 1 guest supervisor binary (<820 KB) handling early VFS mounting, network link setup, zombie process reaping, and vsock IPC telemetry.
+* **[`crates/mos-cluster`](crates/mos-cluster)**: Multi-node mesh clustering using SWIM Gossip protocol and consistent hash ring routing.
+* **[`crates/mos-cli`](crates/mos-cli)**: Developer CLI tool and Operator web console (`mos deploy`, `mos host init`, `mos dashboard`, `mos edge`, `mos bench`).
 
 ---
 
@@ -152,7 +145,7 @@ sudo ln -sf $(pwd)/target/release/mos /usr/local/bin/mos
 
 ### 2. Host Provisioning & Preflight Check
 
-Verify host virtualization capabilities and prepare `/var/lib/mos` storage structure:
+Verify host virtualization capabilities and initialize `/var/lib/mos` storage structure:
 
 ```bash
 # Run host preflight check
@@ -164,7 +157,7 @@ sudo mos host init --dir /var/lib/mos
 
 ### 3. Deploying an Application
 
-MOS automatically inspects your repository, detects runtime dependencies, and launches the MicroVM:
+MOS automatically inspects your codebase, detects runtime dependencies, packages the rootfs, and launches the MicroVM:
 
 ```bash
 # Deploy a Next.js, FastAPI, or Rust Axum app
@@ -179,7 +172,7 @@ mos list
 Launch the high-performance reverse proxy with W3C distributed tracing and custom domain routing ([Ingress & Routing Guide](docs/INGRESS_ROUTING.md)):
 
 ```bash
-# Launch with default domain or static routing table (config/routes.json)
+# Launch with default domain or static routing table
 mos edge --port 8180 --upstream 127.0.0.1:8080 --domain myapp.local
 
 # Or load declarative multi-domain routing table:
@@ -275,6 +268,7 @@ mos/
 ├── scripts/
 │   ├── setup-firecracker.sh    # Download Firecracker & guest kernel assets
 │   └── poc-boot-test.sh        # Quick standalone verification script
+├── mos.example.toml            # mos.toml configuration template
 ├── LICENSE-MIT                 # MIT License
 ├── LICENSE-APACHE              # Apache 2.0 License
 ├── CONTRIBUTING.md             # Contribution guidelines & test setup
@@ -285,7 +279,7 @@ mos/
 
 ## 🧪 Testing & Verification
 
-MOS follows rigorous quality standards with comprehensive unit, integration, adversarial, and ISTQB CTFL boundary tests.
+MOS follows strict testing discipline with unit, integration, adversarial, soak endurance, and ISTQB CTFL boundary tests.
 
 ```bash
 # Run all workspace tests (51 tests)
