@@ -56,30 +56,15 @@ async fn test_e2e_multi_app_build_and_routing_verification() {
 
     router.register(
         "nextjs.mos.local",
-        RouteTarget {
-            instance_id: nextjs_id,
-            host: "127.0.0.1".to_string(),
-            port: 8081,
-            is_suspended: false,
-        },
+        RouteTarget::new(nextjs_id, "127.0.0.1", 8081, false),
     );
     router.register(
         "fastapi.mos.local",
-        RouteTarget {
-            instance_id: fastapi_id,
-            host: "127.0.0.1".to_string(),
-            port: 8082,
-            is_suspended: true,
-        },
+        RouteTarget::new(fastapi_id, "127.0.0.1", 8082, true),
     );
     router.register(
         "axum.mos.local",
-        RouteTarget {
-            instance_id: axum_id,
-            host: "127.0.0.1".to_string(),
-            port: 8083,
-            is_suspended: false,
-        },
+        RouteTarget::new(axum_id, "127.0.0.1", 8083, false),
     );
 
     assert_eq!(

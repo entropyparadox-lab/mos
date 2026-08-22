@@ -9,6 +9,7 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+async-trait = "0.1"
 mos-core.workspace = true
 tokio.workspace = true
 serde.workspace = true

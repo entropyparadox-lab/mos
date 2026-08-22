@@ -240,12 +240,7 @@ async fn test_full_host_safe_performance_evaluation() {
 
     // 2.2 Setup MOS Edge Proxy
     let router = EdgeRouter::new();
-    let target = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "127.0.0.1".to_string(),
-        port: upstream_port,
-        is_suspended: false,
-    };
+    let target = RouteTarget::new(InstanceId::new(), "127.0.0.1", upstream_port, false);
     router.register("bench.mos.local", target);
 
     let proxy = Arc::new(EdgeProxy::new(router.clone(), None));
@@ -318,18 +313,8 @@ async fn test_full_host_safe_performance_evaluation() {
 
     // 2.5 Weighted Canary Decision Latency (10,000 decisions)
     let canary_router = EdgeRouter::new();
-    let primary_target = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "127.0.0.1".to_string(),
-        port: 8001,
-        is_suspended: false,
-    };
-    let canary_target = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "127.0.0.1".to_string(),
-        port: 8002,
-        is_suspended: false,
-    };
+    let primary_target = RouteTarget::new(InstanceId::new(), "127.0.0.1", 8001, false);
+    let canary_target = RouteTarget::new(InstanceId::new(), "127.0.0.1", 8002, false);
     canary_router.register("canary.mos.local", primary_target);
     canary_router.set_canary("canary.mos.local", canary_target, 10, "v2-canary");
 

@@ -333,12 +333,12 @@ async fn main() -> Result<()> {
                 .and_then(|p| p.parse().ok())
                 .unwrap_or(8080);
 
-            let default_target = mos_edge::router::RouteTarget {
-                instance_id: mos_core::InstanceId::new(),
-                host: upstream_host,
-                port: upstream_port,
-                is_suspended: false,
-            };
+            let default_target = mos_edge::router::RouteTarget::new(
+                mos_core::InstanceId::new(),
+                upstream_host,
+                upstream_port,
+                false,
+            );
 
             router.register(&domain, default_target.clone());
             router.register("localhost", default_target.clone());

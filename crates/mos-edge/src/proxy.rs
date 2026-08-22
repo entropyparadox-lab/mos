@@ -76,10 +76,19 @@ impl EdgeProxy {
         // If target is suspended, trigger wake-up
         if target.is_suspended {
             if let Some(wake) = &self.wake_tx {
-                info!(host = %host, "Waking up suspended instance via Wake-on-HTTP");
+                info!(
+                    host = %host,
+                    wake_mode = ?target.wake_mode,
+                    "Waking up suspended instance via Wake-on-HTTP"
+                );
                 let _ = wake.send(host.to_string()).await;
-                // Wait briefly for wake-up (or return 503 retry in edge case)
-                tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+
+                // WakeMode에 따른 버퍼링 슬립 시간 조절
+                let sleep_ms = match target.wake_mode {
+                    crate::router::WakeMode::SnapshotResume => 30,
+                    crate::router::WakeMode::ColdBoot => 50,
+                };
+                tokio::time::sleep(std::time::Duration::from_millis(sleep_ms)).await;
             }
         }
 

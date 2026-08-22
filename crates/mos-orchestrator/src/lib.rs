@@ -1,3 +1,4 @@
+pub mod backend;
 pub mod cgroup;
 pub mod firecracker;
 pub mod gpu_pool;
@@ -8,6 +9,7 @@ pub mod usage_tracker;
 pub mod volume_manager;
 pub mod vsock;
 
+pub use backend::{AppleVzBackend, LinuxFirecrackerBackend, VzCommand, VzReactor};
 pub use cgroup::CgroupController;
 pub use firecracker::{FirecrackerClient, FirecrackerProcess, MicroVmInstance};
 pub use gpu_pool::{GpuBinding, GpuDevice, GpuPoolError, GpuPoolManager};

@@ -37,3 +37,5 @@ reqwest.workspace = true
 hyper.workspace = true
 hyper-util.workspace = true
 bytes.workspace = true
+flate2 = "1.0"
+tar = "0.4"

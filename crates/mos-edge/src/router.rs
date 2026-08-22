@@ -4,12 +4,52 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tracing::{debug, info};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WakeMode {
+    #[default]
+    SnapshotResume,
+    ColdBoot,
+}
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct RouteTarget {
     pub instance_id: InstanceId,
     pub host: String,
     pub port: u16,
     pub is_suspended: bool,
+    #[serde(default)]
+    pub wake_mode: WakeMode,
+    #[serde(default)]
+    pub vsock_tunnel: Option<u32>,
+}
+
+impl RouteTarget {
+    pub fn new(
+        instance_id: InstanceId,
+        host: impl Into<String>,
+        port: u16,
+        is_suspended: bool,
+    ) -> Self {
+        Self {
+            instance_id,
+            host: host.into(),
+            port,
+            is_suspended,
+            wake_mode: WakeMode::SnapshotResume,
+            vsock_tunnel: None,
+        }
+    }
+
+    pub fn with_wake_mode(mut self, mode: WakeMode) -> Self {
+        self.wake_mode = mode;
+        self
+    }
+
+    pub fn with_vsock_tunnel(mut self, port: u32) -> Self {
+        self.vsock_tunnel = Some(port);
+        self
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -160,6 +200,8 @@ impl EdgeRouter {
                 host: entry.host,
                 port: entry.port,
                 is_suspended: entry.is_suspended,
+                wake_mode: WakeMode::SnapshotResume,
+                vsock_tunnel: None,
             };
             self.register(domain, target);
         }

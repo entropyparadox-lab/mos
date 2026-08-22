@@ -15,6 +15,13 @@ This marks the official open source release of **MOS (MicroVM Operating Service)
 
 ### Added
 
+#### Cross-Platform Hypervisor & Apple Silicon Support (`Phase 11`)
+* **`mos-core` Hypervisor Backend Trait**: Hardware-independent `MachineSpec`, `MachineState`, and `HypervisorBackend` trait with compile-time target dispatch and granular `Feature` gating (Snapshot, UFFD, TAP, NAT, VirtioFS, Rosetta, Vsock, Adoption).
+* **`mos-builder` Rootless OCI & EFI zboot Parser**: Pure Rust in-memory OCI layer unpacker with `.wh.` whiteout marker application, arm64 `vmlinuz` EFI zboot header parser (`MZ` + `zimg` -> raw `ARMd` Image), newc-cpio `initramfs` generator, and APFS `clonefile` CoW disk cloner.
+* **`mos-orchestrator` Apple Virtualization.framework (VZ) Backend**: Single serial `DispatchQueue` Reactor pattern isolating `!Send + !Sync` VZVirtualMachine objects from Tokio worker threads with native NAT and Vsock device bindings.
+* **`mos-edge` Multi-Platform WakeMode**: Subdomain routing engine with `WakeMode::SnapshotResume` (Linux UFFD 1.2ms) and `WakeMode::ColdBoot` (macOS VZ 15~25ms) buffering handshakes.
+* **Phase 11 Cross-Platform E2E Test Suite**: Comprehensive cross-validation pipeline covering EFI zboot decompression, rootless OCI unpacking, CoW disk replication, VZ reactor gating, and cross-platform edge routing.
+
 #### Core Architecture & MicroVM Orchestration (`mos-core`, `mos-orchestrator`)
 * **KVM MicroVM Lifecycle Engine**: Hardware-enforced guest execution using Firecracker v1.x socket APIs (`/boot-source`, `/drives`, `/network-interfaces`, `/vsock`, `/actions`, `/snapshot/create`, `/snapshot/load`).
 * **Scale-to-Zero Snapshot Engine**: Full memory snapshot creation with sub-30ms cold-resume capability.

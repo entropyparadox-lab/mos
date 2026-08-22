@@ -115,20 +115,10 @@ fn test_phase8_advanced_platform_full_pipeline() {
 
     // Router & Canary Pipeline
     let router = EdgeRouter::new();
-    let stable_target = RouteTarget {
-        instance_id: inst_worker_1,
-        host: "172.16.0.2".to_string(),
-        port: 8080,
-        is_suspended: false,
-    };
+    let stable_target = RouteTarget::new(inst_worker_1, "172.16.0.2", 8080, false);
     router.register("ai-app.mos.local", stable_target);
 
-    let canary_target = RouteTarget {
-        instance_id: inst_worker_2,
-        host: "172.16.0.3".to_string(),
-        port: 8080,
-        is_suspended: false,
-    };
+    let canary_target = RouteTarget::new(inst_worker_2, "172.16.0.3", 8080, false);
 
     let canary_config = CanaryPipelineConfig {
         step_weights: vec![10, 50, 100],

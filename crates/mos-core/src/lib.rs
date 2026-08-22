@@ -92,11 +92,16 @@ pub enum MosError {
 pub type MosResult<T> = Result<T, MosError>;
 
 pub mod auth;
+pub mod backend;
 pub mod billing;
 pub mod tenant;
 pub mod volume;
 
 pub use auth::{Ed25519AuthManager, RbacTokenPayload, Role};
+pub use backend::{
+    BackendError, BackendResult, ExtraDiskSpec, Feature, HypervisorBackend, MachineSpec,
+    MockHypervisorBackend, NetworkSpec,
+};
 pub use billing::{
     BillingEngine, BillingError, BillingRate, BillingTransaction, CreditAccount, UsageMetric,
 };

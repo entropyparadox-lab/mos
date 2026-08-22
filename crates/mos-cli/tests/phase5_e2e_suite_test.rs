@@ -24,12 +24,7 @@ fn test_phase5_e2e_tls_and_canary_pipeline() {
 
     router.register(
         "app.mos.local",
-        RouteTarget {
-            instance_id: stable_vm,
-            host: "127.0.0.1".to_string(),
-            port: 8081,
-            is_suspended: false,
-        },
+        RouteTarget::new(stable_vm, "127.0.0.1", 8081, false),
     );
 
     // Initial 100% stable
@@ -39,12 +34,7 @@ fn test_phase5_e2e_tls_and_canary_pipeline() {
     // Deploy Canary: 10% weight
     router.set_canary(
         "app.mos.local",
-        RouteTarget {
-            instance_id: canary_vm,
-            host: "127.0.0.1".to_string(),
-            port: 8082,
-            is_suspended: false,
-        },
+        RouteTarget::new(canary_vm, "127.0.0.1", 8082, false),
         10,
         "v2-canary-git-sha",
     );

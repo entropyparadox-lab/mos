@@ -9,18 +9,8 @@ fn test_weighted_canary_routing_distribution() {
     let stable_id = InstanceId::new();
     let canary_id = InstanceId::new();
 
-    let stable_target = RouteTarget {
-        instance_id: stable_id,
-        host: "127.0.0.1".to_string(),
-        port: 8081,
-        is_suspended: false,
-    };
-    let canary_target = RouteTarget {
-        instance_id: canary_id,
-        host: "127.0.0.1".to_string(),
-        port: 8082,
-        is_suspended: false,
-    };
+    let stable_target = RouteTarget::new(stable_id, "127.0.0.1", 8081, false);
+    let canary_target = RouteTarget::new(canary_id, "127.0.0.1", 8082, false);
 
     router.register("app.mos.local", stable_target);
 
@@ -69,18 +59,8 @@ fn test_canary_instant_rollback() {
     let stable_id = InstanceId::new();
     let canary_id = InstanceId::new();
 
-    let stable_target = RouteTarget {
-        instance_id: stable_id,
-        host: "127.0.0.1".to_string(),
-        port: 8081,
-        is_suspended: false,
-    };
-    let canary_target = RouteTarget {
-        instance_id: canary_id,
-        host: "127.0.0.1".to_string(),
-        port: 8082,
-        is_suspended: false,
-    };
+    let stable_target = RouteTarget::new(stable_id, "127.0.0.1", 8081, false);
+    let canary_target = RouteTarget::new(canary_id, "127.0.0.1", 8082, false);
 
     router.register("app.mos.local", stable_target);
     router.set_canary("app.mos.local", canary_target, 30, "v2-canary");

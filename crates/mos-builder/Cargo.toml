@@ -16,6 +16,10 @@ serde_json.workspace = true
 tracing.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
+zstd.workspace = true
+flate2 = "1.0"
+tar = "0.4"
+libc = "0.2"
 
 [dev-dependencies]
 tempfile.workspace = true

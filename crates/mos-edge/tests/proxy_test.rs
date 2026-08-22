@@ -45,12 +45,7 @@ async fn test_edge_proxy_routing_and_forwarding() {
     let _backend_handle = start_mock_backend(backend_port, "Hello from Vibe App!").await;
 
     let router = EdgeRouter::new();
-    let target = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "127.0.0.1".to_string(),
-        port: backend_port,
-        is_suspended: false,
-    };
+    let target = RouteTarget::new(InstanceId::new(), "127.0.0.1", backend_port, false);
     router.register("vibe-app.mos.local", target);
 
     let proxy = Arc::new(EdgeProxy::new(router, None));

@@ -66,12 +66,7 @@ async fn test_wake_on_http_end_to_end_flow() {
     });
 
     let router = EdgeRouter::new();
-    let target = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "127.0.0.1".to_string(),
-        port: backend_port,
-        is_suspended: true, // Initially Suspended!
-    };
+    let target = RouteTarget::new(InstanceId::new(), "127.0.0.1", backend_port, true);
     router.register("wake-app.mos.local", target);
 
     let proxy = Arc::new(EdgeProxy::new(router, Some(wake_tx)));

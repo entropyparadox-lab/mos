@@ -1,5 +1,8 @@
+pub mod cow;
 pub mod heavy_workload;
+pub mod kernel;
 pub mod litestream;
+pub mod oci;
 
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
@@ -8,8 +11,11 @@ use std::process::Stdio;
 use tokio::process::Command;
 use tracing::info;
 
+pub use cow::CoWCloner;
 pub use heavy_workload::{HeavyWorkloadDetector, HeavyWorkloadManifest};
+pub use kernel::KernelUnpacker;
 pub use litestream::{LitestreamDbConfig, LitestreamManager, LitestreamPlan};
+pub use oci::{InitramfsBuilder, OciLayerUnpacker};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlanResult {

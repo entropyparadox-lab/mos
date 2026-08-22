@@ -6,12 +6,7 @@ use mos_core::InstanceId;
 #[test]
 fn test_canary_pipeline_step_promotion_and_full_rollout() {
     let router = EdgeRouter::new();
-    let stable_target = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "172.16.0.2".to_string(),
-        port: 8080,
-        is_suspended: false,
-    };
+    let stable_target = RouteTarget::new(InstanceId::new(), "172.16.0.2", 8080, false);
     router.register("app.mos.local", stable_target);
 
     let config = CanaryPipelineConfig {
@@ -21,12 +16,7 @@ fn test_canary_pipeline_step_promotion_and_full_rollout() {
     };
     let manager = CanaryPipelineManager::new(router.clone(), config);
 
-    let canary_target = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "172.16.0.3".to_string(),
-        port: 8080,
-        is_suspended: false,
-    };
+    let canary_target = RouteTarget::new(InstanceId::new(), "172.16.0.3", 8080, false);
 
     // 1. Start Canary at 10%
     manager.start_canary_deployment("app.mos.local", canary_target, "v2-next");
@@ -71,12 +61,7 @@ fn test_canary_pipeline_step_promotion_and_full_rollout() {
 #[test]
 fn test_canary_pipeline_automatic_rollback_on_high_error_rate() {
     let router = EdgeRouter::new();
-    let stable_target = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "172.16.0.2".to_string(),
-        port: 8080,
-        is_suspended: false,
-    };
+    let stable_target = RouteTarget::new(InstanceId::new(), "172.16.0.2", 8080, false);
     router.register("faulty.mos.local", stable_target);
 
     let config = CanaryPipelineConfig {
@@ -86,12 +71,7 @@ fn test_canary_pipeline_automatic_rollback_on_high_error_rate() {
     };
     let manager = CanaryPipelineManager::new(router.clone(), config);
 
-    let faulty_canary = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "172.16.0.9".to_string(),
-        port: 8080,
-        is_suspended: false,
-    };
+    let faulty_canary = RouteTarget::new(InstanceId::new(), "172.16.0.9", 8080, false);
 
     manager.start_canary_deployment("faulty.mos.local", faulty_canary, "v2-buggy");
 

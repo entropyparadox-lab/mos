@@ -17,6 +17,10 @@ pub enum GuestMessage {
         memory_rss_bytes: u64,
         uptime_secs: u64,
     },
+    Ready {
+        port: u16,
+        wake_latency_ms: u64,
+    },
     Log {
         timestamp: u64,
         is_stderr: bool,
@@ -33,6 +37,8 @@ pub enum GuestMessage {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HostCommand {
     Ping,
+    TimeSync { epoch_nanos: u64 },
+    WarmConnections,
     Signal { signal: String },
     Shutdown,
 }

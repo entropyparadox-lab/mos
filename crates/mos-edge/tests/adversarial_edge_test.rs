@@ -13,12 +13,7 @@ use tokio::net::TcpListener;
 #[tokio::test]
 async fn test_adversarial_backend_crash_handling() {
     let router = EdgeRouter::new();
-    let target = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "127.0.0.1".to_string(),
-        port: 19999, // Unreachable port (simulating dead backend)
-        is_suspended: false,
-    };
+    let target = RouteTarget::new(InstanceId::new(), "127.0.0.1", 19999, false);
     router.register("dead-app.mos.local", target);
 
     let proxy = Arc::new(EdgeProxy::new(router, None));
@@ -77,12 +72,7 @@ async fn test_adversarial_concurrent_request_flooding() {
     });
 
     let router = EdgeRouter::new();
-    let target = RouteTarget {
-        instance_id: InstanceId::new(),
-        host: "127.0.0.1".to_string(),
-        port: backend_port,
-        is_suspended: false,
-    };
+    let target = RouteTarget::new(InstanceId::new(), "127.0.0.1", backend_port, false);
     router.register("flood-app.mos.local", target);
 
     let proxy = Arc::new(EdgeProxy::new(router, None));
