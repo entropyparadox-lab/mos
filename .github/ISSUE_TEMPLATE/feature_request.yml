@@ -1,0 +1,23 @@
+name: "💡 Feature Request / RFC"
+description: "Propose a new MicroVM feature, ingress optimization, or orchestrator capability"
+title: "[RFC]: "
+labels: ["enhancement", "discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We welcome proposals for snapshot fast-boot, Nixpacks builders, or cluster gossip improvements!
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem / Motivation"
+      description: "Describe the use case or limitation."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: "Proposed Architecture"
+      description: "Describe the proposed design or Rust crate changes."
+    validations:
+      required: true

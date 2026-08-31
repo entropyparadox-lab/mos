@@ -1,0 +1,32 @@
+name: "🐛 Bug Report"
+description: "Report a bug, kernel/KVM virtualization panic, or proxy issue in MOS"
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting an issue in MOS! Please ensure your environment has hardware virtualization (`/dev/kvm`) enabled.
+  - type: input
+    id: env
+    attributes:
+      label: "Environment & MOS Version"
+      description: "Linux distro, kernel version (`uname -r`), and MOS commit/version"
+      placeholder: "Ubuntu 24.04, Linux 6.8.0, MOS v0.1.0"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: "Describe the bug"
+      description: "What MicroVM or orchestrator behavior occurred?"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Reproduction Steps / MicroVM Config"
+      description: "CLI commands, rootfs config, or Rust test case."
+      render: bash
+    validations:
+      required: true
