@@ -3,7 +3,23 @@ set -eo pipefail
 
 echo "🔍 [git-hook] Running fast pre-commit verification..."
 
-# 1. Format check (for Zig projects)
+# 1. Branch naming policy check
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" = "main" ]; then
+    echo "⚠️  [Notice] You are committing directly on 'main'. Remember direct push to 'main' is blocked."
+    echo "   Consider creating a feature branch: git checkout -b feat/your-feature"
+elif [ "$CURRENT_BRANCH" != "zig-master" ] && [ "$CURRENT_BRANCH" != "HEAD" ]; then
+    BRANCH_PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|release)\/[a-zA-Z0-9_-]+$"
+    if [[ ! "$CURRENT_BRANCH" =~ $BRANCH_PATTERN ]]; then
+        echo "❌ [BLOCKED] Invalid branch name: '$CURRENT_BRANCH'"
+        echo "   Branch name must follow format: <type>/<description>"
+        echo "   Allowed types: feat/, fix/, docs/, style/, refactor/, perf/, test/, build/, ci/, chore/, release/"
+        echo "   Example: feat/simd-scanner, fix/yaml-indent"
+        exit 1
+    fi
+fi
+
+# 2. Format check (for Zig projects)
 if command -v zig >/dev/null 2>&1 && [ -f "build.zig" ]; then
     FMT_TARGETS=""
     [ -d "src" ] && FMT_TARGETS="$FMT_TARGETS src"
@@ -16,7 +32,7 @@ if command -v zig >/dev/null 2>&1 && [ -f "build.zig" ]; then
     }
 fi
 
-# 1. Format check (for Rust projects)
+# 2. Format check (for Rust projects)
 if command -v cargo >/dev/null 2>&1 && [ -f "Cargo.toml" ]; then
     cargo fmt --check || {
         echo "❌ cargo fmt check failed! Run 'cargo fmt' to fix."
@@ -24,14 +40,14 @@ if command -v cargo >/dev/null 2>&1 && [ -f "Cargo.toml" ]; then
     }
 fi
 
-# 2. Privacy & internal leak check
+# 3. Privacy & internal leak check
 if git diff --cached | grep -E "/home/[a-z]+|localhost:[0-9]{4,5}|[a-zA-Z0-9.-]+\.internal" >/dev/null 2>&1; then
     echo "⚠️  WARNING: Potential internal path or domain detected in staged diff:"
     git diff --cached | grep -E "/home/[a-z]+|localhost:[0-9]{4,5}|[a-zA-Z0-9.-]+\.internal" || true
     echo "Please sanitize any private hostnames/paths before pushing."
 fi
 
-# 3. Version presence check in build.zig.zon (if Zig package)
+# 4. Version presence check in build.zig.zon (if Zig package)
 if [ -f "build.zig.zon" ]; then
     VERSION=$(grep -oP '\.version\s*=\s*"\K[^"]+' build.zig.zon || true)
     if [ -z "$VERSION" ]; then

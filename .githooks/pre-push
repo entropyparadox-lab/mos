@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+echo "🛡️  [git-hook] Running pre-push governance checks..."
+
+# Allow manual emergency bypass only with explicit env var
+if [ "$ALLOW_MAIN_PUSH" = "1" ]; then
+    echo "⚠️  ALLOW_MAIN_PUSH=1 detected. Bypassing push protections."
+    exit 0
+fi
+
+while read -r local_ref local_oid remote_ref remote_oid; do
+    # 1. Block direct push to main branch
+    if [ "$remote_ref" = "refs/heads/main" ]; then
+        # Check if user is pushing a single commit or branch
+        echo "❌ [BLOCKED] Direct push to 'main' is prohibited by open-source governance policy!"
+        echo ""
+        echo "   👉 How to submit changes:"
+        echo "      1. git checkout -b feat/your-feature-name"
+        echo "      2. git push origin feat/your-feature-name"
+        echo "      3. Open a Pull Request on GitHub"
+        echo ""
+        echo "   (If emergency admin bypass is required, prefix command with: ALLOW_MAIN_PUSH=1 git push)"
+        exit 1
+    fi
+
+    # 2. Enforce SemVer & Manifest consistency on tag pushes
+    if [[ "$remote_ref" =~ ^refs/tags/(v[0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
+        TAG_NAME="${BASH_REMATCH[1]}"
+        TAG_VER="${TAG_NAME#v}"
+        echo "  -> Verifying release tag: $TAG_NAME (Version: $TAG_VER)"
+
+        # Check Zig package version
+        if [ -f "build.zig.zon" ]; then
+            ZON_VER=$(grep -oP '\.version\s*=\s*"\K[^"]+' build.zig.zon || true)
+            if [ "$ZON_VER" != "$TAG_VER" ]; then
+                echo "❌ [BLOCKED] Version mismatch on tag push!"
+                echo "   Git Tag:          $TAG_VER"
+                echo "   build.zig.zon:    $ZON_VER"
+                echo "   Please update 'build.zig.zon' to match tag '$TAG_VER' before pushing."
+                exit 1
+            fi
+        fi
+
+        # Check Rust package version
+        if [ -f "Cargo.toml" ]; then
+            CARGO_VER=$(grep -oP '^version\s*=\s*"\K[^"]+' Cargo.toml || true)
+            if [ -n "$CARGO_VER" ] && [ "$CARGO_VER" != "$TAG_VER" ]; then
+                echo "❌ [BLOCKED] Version mismatch on tag push!"
+                echo "   Git Tag:       $TAG_VER"
+                echo "   Cargo.toml:    $CARGO_VER"
+                echo "   Please update 'Cargo.toml' to match tag '$TAG_VER' before pushing."
+                exit 1
+            fi
+        fi
+        echo "  ✅ Version alignment verified for $TAG_NAME!"
+    fi
+done
+
+echo "✅ [git-hook] Pre-push verification passed!"
+exit 0
