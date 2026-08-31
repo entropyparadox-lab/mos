@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(head -n 1 "$COMMIT_MSG_FILE")
+
+# Allow merge/revert commits
+if [[ "$COMMIT_MSG" =~ ^Merge || "$COMMIT_MSG" =~ ^Revert ]]; then
+    exit 0
+fi
+
+# Conventional Commits regex
+PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_-]+\))?:\ .+$"
+
+if [[ ! "$COMMIT_MSG" =~ $PATTERN ]]; then
+    echo "❌ [zserde-hook] Invalid commit message format!"
+    echo "   Received: '$COMMIT_MSG'"
+    echo ""
+    echo "   Expected Conventional Commits format:"
+    echo "     <type>(<optional scope>): <description>"
+    echo ""
+    echo "   Examples:"
+    echo "     feat(json): add SIMD quote scanner"
+    echo "     fix(yaml): resolve optional nested struct parsing"
+    echo "     docs: update README installation guide"
+    echo "     chore(release): bump version to v1.0.2"
+    echo ""
+    echo "   Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+    exit 1
+fi
+
+exit 0

@@ -60,6 +60,12 @@ enum Commands {
         domain: String,
         #[arg(short, long)]
         config: Option<String>,
+        #[arg(long, default_value = "8443")]
+        tls_port: u16,
+        #[arg(long)]
+        tls_cert: Option<PathBuf>,
+        #[arg(long)]
+        tls_key: Option<PathBuf>,
     },
 }
 
@@ -315,6 +321,9 @@ async fn main() -> Result<()> {
             upstream,
             domain,
             config,
+            tls_port,
+            tls_cert,
+            tls_key,
         } => {
             println!("🦀 Launching MOS Edge Ingress Proxy on port {}", port);
             println!("  • Default Routing Domain: {} -> {}", domain, upstream);
@@ -381,6 +390,39 @@ async fn main() -> Result<()> {
             }
 
             let proxy = std::sync::Arc::new(mos_edge::proxy::EdgeProxy::new(router, None));
+
+            // Check and spawn TLS server if certificates are available
+            let default_cert = PathBuf::from("~/.config/mos/certs/fullchain.pem");
+            let default_key = PathBuf::from("~/.config/mos/certs/key.pem");
+            let cert_path = tls_cert.or_else(|| {
+                if default_cert.exists() {
+                    Some(default_cert)
+                } else {
+                    None
+                }
+            });
+            let key_path = tls_key.or_else(|| {
+                if default_key.exists() {
+                    Some(default_key)
+                } else {
+                    None
+                }
+            });
+
+            if let (Some(cert), Some(key)) = (cert_path, key_path) {
+                let tls_proxy = std::sync::Arc::clone(&proxy);
+                let tls_addr = SocketAddr::from(([0, 0, 0, 0], tls_port));
+                tokio::spawn(async move {
+                    if let Err(e) = tls_proxy.run_tls_server(tls_addr, cert, key).await {
+                        eprintln!("  ⚠️ TLS Ingress Server error: {}", e);
+                    }
+                });
+                println!(
+                    "  • Wildcard TLS Ingress Active on https://0.0.0.0:{}",
+                    tls_port
+                );
+            }
+
             let addr = SocketAddr::from(([0, 0, 0, 0], port));
             proxy.run_server(addr).await?;
         }

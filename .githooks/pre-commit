@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+echo "🔍 [git-hook] Running fast pre-commit verification..."
+
+# 1. Format check (for Zig projects)
+if command -v zig >/dev/null 2>&1 && [ -f "build.zig" ]; then
+    FMT_TARGETS=""
+    [ -d "src" ] && FMT_TARGETS="$FMT_TARGETS src"
+    [ -d "examples" ] && FMT_TARGETS="$FMT_TARGETS examples"
+    [ -d "tests" ] && FMT_TARGETS="$FMT_TARGETS tests"
+    [ -f "build.zig" ] && FMT_TARGETS="$FMT_TARGETS build.zig"
+    zig fmt --check $FMT_TARGETS || {
+        echo "❌ zig fmt check failed! Run 'zig fmt $FMT_TARGETS' to fix."
+        exit 1
+    }
+fi
+
+# 1. Format check (for Rust projects)
+if command -v cargo >/dev/null 2>&1 && [ -f "Cargo.toml" ]; then
+    cargo fmt --check || {
+        echo "❌ cargo fmt check failed! Run 'cargo fmt' to fix."
+        exit 1
+    }
+fi
+
+# 2. Privacy & internal leak check
+if git diff --cached | grep -E "/home/[a-z]+|localhost:[0-9]{4,5}|[a-zA-Z0-9.-]+\.internal" >/dev/null 2>&1; then
+    echo "⚠️  WARNING: Potential internal path or domain detected in staged diff:"
+    git diff --cached | grep -E "/home/[a-z]+|localhost:[0-9]{4,5}|[a-zA-Z0-9.-]+\.internal" || true
+    echo "Please sanitize any private hostnames/paths before pushing."
+fi
+
+# 3. Version presence check in build.zig.zon (if Zig package)
+if [ -f "build.zig.zon" ]; then
+    VERSION=$(grep -oP '\.version\s*=\s*"\K[^"]+' build.zig.zon || true)
+    if [ -z "$VERSION" ]; then
+        echo "❌ Error: build.zig.zon missing .version field!"
+        exit 1
+    fi
+fi
+
+echo "✅ [git-hook] Fast pre-commit checks passed!"
+exit 0

@@ -9,10 +9,15 @@ use hyper::service::service_fn;
 use hyper::{Request, Response, StatusCode};
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use hyper_util::server::conn::auto;
+use std::fs::File;
+use std::io::BufReader;
 use std::net::SocketAddr;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
+use tokio_rustls::rustls::ServerConfig;
+use tokio_rustls::TlsAcceptor;
 use tracing::{error, info, warn};
 
 pub type ResponseBody = BoxBody<Bytes, hyper::Error>;
@@ -182,6 +187,142 @@ impl EdgeProxy {
             });
         }
     }
+
+    pub async fn run_tls_server(
+        self: Arc<Self>,
+        bind_addr: SocketAddr,
+        cert_path: PathBuf,
+        key_path: PathBuf,
+    ) -> Result<()> {
+        let tls_config = load_tls_config(&cert_path, &key_path)?;
+        let acceptor = TlsAcceptor::from(tls_config);
+        let listener = TcpListener::bind(bind_addr).await?;
+        info!(
+            "MOS Edge TLS Ingress Proxy listening on https://{}",
+            bind_addr
+        );
+
+        loop {
+            let (stream, _remote_addr) = match listener.accept().await {
+                Ok(conn) => conn,
+                Err(e) => {
+                    warn!("Failed to accept TLS incoming connection: {:?}", e);
+                    continue;
+                }
+            };
+
+            let acceptor = acceptor.clone();
+            let proxy = Arc::clone(&self);
+
+            tokio::spawn(async move {
+                let tls_stream = match acceptor.accept(stream).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        tracing::debug!("TLS handshake failed: {:?}", e);
+                        return;
+                    }
+                };
+
+                let io = TokioIo::new(tls_stream);
+                let service = service_fn(move |req| {
+                    let proxy = Arc::clone(&proxy);
+                    async move { proxy.handle_request(req).await }
+                });
+
+                let auto_server = auto::Builder::new(TokioExecutor::new());
+                if let Err(err) = auto_server
+                    .serve_connection_with_upgrades(io, service)
+                    .await
+                {
+                    debug_error(err);
+                }
+            });
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct CustomSniResolver {
+    sni: tokio_rustls::rustls::server::ResolvesServerCertUsingSni,
+    fallback: Arc<tokio_rustls::rustls::sign::CertifiedKey>,
+}
+
+impl tokio_rustls::rustls::server::ResolvesServerCert for CustomSniResolver {
+    fn resolve(
+        &self,
+        client_hello: tokio_rustls::rustls::server::ClientHello,
+    ) -> Option<Arc<tokio_rustls::rustls::sign::CertifiedKey>> {
+        if let Some(key) = self.sni.resolve(client_hello) {
+            Some(key)
+        } else {
+            Some(self.fallback.clone())
+        }
+    }
+}
+
+pub fn load_tls_config(cert_path: &Path, key_path: &Path) -> Result<Arc<ServerConfig>> {
+    let certfile = File::open(cert_path)?;
+    let mut reader = BufReader::new(certfile);
+    let certs: Vec<_> = rustls_pemfile::certs(&mut reader).collect::<Result<Vec<_>, _>>()?;
+
+    let keyfile = File::open(key_path)?;
+    let mut reader = BufReader::new(keyfile);
+    let key = rustls_pemfile::private_key(&mut reader)?
+        .ok_or_else(|| anyhow::anyhow!("No private key found in {}", key_path.display()))?;
+
+    let primary_signing_key =
+        tokio_rustls::rustls::crypto::aws_lc_rs::sign::any_supported_type(&key)?;
+    let primary_certified = Arc::new(tokio_rustls::rustls::sign::CertifiedKey::new(
+        certs,
+        primary_signing_key,
+    ));
+
+    let mut sni = tokio_rustls::rustls::server::ResolvesServerCertUsingSni::new();
+    let _ = sni.add("*.mos.local", (*primary_certified).clone());
+    let _ = sni.add("mos.local", (*primary_certified).clone());
+
+    // Check if Tailscale cert exists in same directory
+    let ts_cert = cert_path
+        .parent()
+        .unwrap_or(Path::new(""))
+        .join("tailscale.crt");
+    let ts_key = cert_path
+        .parent()
+        .unwrap_or(Path::new(""))
+        .join("tailscale.key");
+    if ts_cert.exists() && ts_key.exists() {
+        if let (Ok(f_c), Ok(f_k)) = (File::open(&ts_cert), File::open(&ts_key)) {
+            let mut r_c = BufReader::new(f_c);
+            let mut r_k = BufReader::new(f_k);
+            if let (Ok(c_list), Ok(Some(k))) = (
+                rustls_pemfile::certs(&mut r_c).collect::<Result<Vec<_>, _>>(),
+                rustls_pemfile::private_key(&mut r_k),
+            ) {
+                if let Ok(sign_key) =
+                    tokio_rustls::rustls::crypto::aws_lc_rs::sign::any_supported_type(&k)
+                {
+                    let ts_certified = Arc::new(tokio_rustls::rustls::sign::CertifiedKey::new(
+                        c_list, sign_key,
+                    ));
+                    let _ = sni.add(
+                        "YOUR_TAILSCALE_HOST.ts.net",
+                        (*ts_certified).clone(),
+                    );
+                }
+            }
+        }
+    }
+
+    let resolver = CustomSniResolver {
+        sni,
+        fallback: primary_certified,
+    };
+
+    let config = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_cert_resolver(Arc::new(resolver));
+
+    Ok(Arc::new(config))
 }
 
 fn debug_error(err: impl std::fmt::Debug) {
