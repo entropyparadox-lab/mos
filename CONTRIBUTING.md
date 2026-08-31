@@ -64,9 +64,14 @@ crates/
 
 ## Development Workflow
 
-### 1. Branch Naming
+### 1. Branch Strategy & Git Hooks
 
-Create a feature branch from `main`:
+Install the local pre-commit and pre-push validation hooks:
+```bash
+./scripts/setup-hooks.sh
+```
+
+Create a feature branch from `main` (Direct push to `main` is prohibited):
 
 ```bash
 git checkout -b feat/your-feature-name
