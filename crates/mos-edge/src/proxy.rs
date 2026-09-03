@@ -116,11 +116,136 @@ impl EdgeProxy {
         }
     }
 
+    async fn proxy_websocket(
+        &self,
+        mut req: Request<Incoming>,
+        target: &RouteTarget,
+    ) -> Result<Response<ResponseBody>> {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let on_upgrade = hyper::upgrade::on(&mut req);
+
+        let addr = format!("{}:{}", target.host, target.port);
+        let mut backend_stream = TcpStream::connect(&addr).await?;
+
+        let uri_str = req.uri().to_string();
+        let path_and_query = req
+            .uri()
+            .path_and_query()
+            .map(|pq| pq.as_str())
+            .unwrap_or(&uri_str);
+
+        let mut req_bytes = Vec::with_capacity(1024);
+        req_bytes.extend_from_slice(
+            format!("{} {} HTTP/1.1\r\n", req.method(), path_and_query).as_bytes(),
+        );
+
+        for (k, v) in req.headers().iter() {
+            if k != hyper::header::HOST {
+                req_bytes.extend_from_slice(k.as_str().as_bytes());
+                req_bytes.extend_from_slice(b": ");
+                req_bytes.extend_from_slice(v.as_bytes());
+                req_bytes.extend_from_slice(b"\r\n");
+            }
+        }
+        req_bytes.extend_from_slice(format!("host: {}\r\n", target.host).as_bytes());
+        req_bytes.extend_from_slice(b"x-forwarded-for: 127.0.0.1\r\n");
+        req_bytes.extend_from_slice(b"x-forwarded-proto: http\r\n\r\n");
+
+        backend_stream.write_all(&req_bytes).await?;
+
+        let mut resp_buf = Vec::with_capacity(2048);
+        let mut temp = [0u8; 1024];
+        let header_end;
+        loop {
+            let n = backend_stream.read(&mut temp).await?;
+            if n == 0 {
+                anyhow::bail!("Backend closed connection during WebSocket handshake");
+            }
+            resp_buf.extend_from_slice(&temp[..n]);
+            if let Some(pos) = resp_buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                header_end = pos + 4;
+                break;
+            }
+        }
+
+        let header_bytes = &resp_buf[..header_end];
+        let trailing_bytes = resp_buf[header_end..].to_vec();
+
+        let header_str = String::from_utf8_lossy(header_bytes);
+        let mut lines = header_str.split("\r\n");
+        let status_line = lines.next().unwrap_or("");
+
+        let mut status_parts = status_line.split_whitespace();
+        status_parts.next();
+        let status_code: u16 = status_parts
+            .next()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(101);
+
+        let mut res_builder = Response::builder().status(status_code);
+
+        for line in lines {
+            if line.is_empty() {
+                continue;
+            }
+            if let Some((k, v)) = line.split_once(':') {
+                let k_trim = k.trim();
+                let v_trim = v.trim();
+                if !k_trim.is_empty() {
+                    res_builder = res_builder.header(k_trim, v_trim);
+                }
+            }
+        }
+
+        tokio::spawn(async move {
+            match on_upgrade.await {
+                Ok(upgraded) => {
+                    info!("WebSocket client upgrade successful, starting bidirectional copy (trailing {} bytes)", trailing_bytes.len());
+                    let mut client_io = TokioIo::new(upgraded);
+                    if !trailing_bytes.is_empty() {
+                        if let Err(e) = client_io.write_all(&trailing_bytes).await {
+                            warn!("Failed to write trailing bytes: {:?}", e);
+                            return;
+                        }
+                    }
+                    match tokio::io::copy_bidirectional(&mut client_io, &mut backend_stream).await {
+                        Ok((from_client, from_backend)) => {
+                            info!(
+                                "WebSocket tunnel finished: client->backend={}, backend->client={}",
+                                from_client, from_backend
+                            );
+                        }
+                        Err(e) => {
+                            tracing::debug!("WebSocket tunnel closed with error: {:?}", e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    warn!("Client WebSocket upgrade failed: {:?}", e);
+                }
+            }
+        });
+
+        Ok(res_builder.body(full_body(Bytes::new()))?)
+    }
+
     async fn forward(
         &self,
         req: Request<Incoming>,
         target: &RouteTarget,
     ) -> Result<Response<ResponseBody>> {
+        let is_websocket = req
+            .headers()
+            .get(hyper::header::UPGRADE)
+            .and_then(|h| h.to_str().ok())
+            .map(|s| s.eq_ignore_ascii_case("websocket"))
+            .unwrap_or(false);
+
+        if is_websocket {
+            return self.proxy_websocket(req, target).await;
+        }
+
         let addr = format!("{}:{}", target.host, target.port);
         let stream = TcpStream::connect(&addr).await?;
         let io = TokioIo::new(stream);
@@ -278,8 +403,9 @@ pub fn load_tls_config(cert_path: &Path, key_path: &Path) -> Result<Arc<ServerCo
     ));
 
     let mut sni = tokio_rustls::rustls::server::ResolvesServerCertUsingSni::new();
-    let _ = sni.add("*.mos.local", (*primary_certified).clone());
-    let _ = sni.add("mos.local", (*primary_certified).clone());
+    let base_domain = std::env::var("MOS_DOMAIN").unwrap_or_else(|_| "mos.local".to_string());
+    let _ = sni.add(&format!("*.{}", base_domain), (*primary_certified).clone());
+    let _ = sni.add(&base_domain, (*primary_certified).clone());
 
     // Check if Tailscale cert exists in same directory
     let ts_cert = cert_path
@@ -304,10 +430,9 @@ pub fn load_tls_config(cert_path: &Path, key_path: &Path) -> Result<Arc<ServerCo
                     let ts_certified = Arc::new(tokio_rustls::rustls::sign::CertifiedKey::new(
                         c_list, sign_key,
                     ));
-                    let _ = sni.add(
-                        "YOUR_TAILSCALE_HOST.ts.net",
-                        (*ts_certified).clone(),
-                    );
+                    if let Ok(ts_domain) = std::env::var("MOS_TAILSCALE_DOMAIN") {
+                        let _ = sni.add(&ts_domain, (*ts_certified).clone());
+                    }
                 }
             }
         }

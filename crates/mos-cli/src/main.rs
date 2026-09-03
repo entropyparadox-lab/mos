@@ -392,8 +392,11 @@ async fn main() -> Result<()> {
             let proxy = std::sync::Arc::new(mos_edge::proxy::EdgeProxy::new(router, None));
 
             // Check and spawn TLS server if certificates are available
-            let default_cert = PathBuf::from("~/.config/mos/certs/fullchain.pem");
-            let default_key = PathBuf::from("~/.config/mos/certs/key.pem");
+            let home_dir = std::env::var("HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| PathBuf::from("/etc"));
+            let default_cert = home_dir.join(".config/mos/certs/fullchain.pem");
+            let default_key = home_dir.join(".config/mos/certs/key.pem");
             let cert_path = tls_cert.or_else(|| {
                 if default_cert.exists() {
                     Some(default_cert)
