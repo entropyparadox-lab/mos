@@ -24,7 +24,7 @@ fn test_litestream_yaml_generation() {
 
     assert!(yaml.contains("/app/data/app.db"));
     assert!(yaml.contains("my-bucket"));
-    assert!(yaml.contains("instances/inst-abc-123/app.db"));
+    assert!(yaml.contains("apps/inst-abc-123/app.db"));
     assert!(yaml.contains("https://account.r2.cloudflarestorage.com"));
 
     let restore_cmd = LitestreamManager::generate_restore_command(
