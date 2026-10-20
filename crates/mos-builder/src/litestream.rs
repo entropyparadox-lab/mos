@@ -71,7 +71,7 @@ impl LitestreamManager {
     }
 
     pub fn generate_litestream_yaml(
-        instance_id: &str,
+        app_id: &str,
         db_path: &Path,
         bucket: Option<&str>,
         r2_endpoint: Option<&str>,
@@ -89,12 +89,12 @@ impl LitestreamManager {
     replicas:
       - type: s3
         bucket: {}
-        path: instances/{}/{}
+        path: apps/{}/{}
 {}        sync-interval: 1s
 "#,
             db_target,
             bucket_name,
-            instance_id,
+            app_id,
             db_path
                 .file_name()
                 .and_then(|f| f.to_str())

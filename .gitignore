@@ -26,6 +26,7 @@ Cargo.lock
 *.local.json
 *.local.toml
 config/routes.json
+config/routes.json.bak*
 config/routes.local.json
 config/*.local.json
 mos.local.toml

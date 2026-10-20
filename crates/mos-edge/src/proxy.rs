@@ -4,7 +4,7 @@ use bytes::Bytes;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Full};
 use hyper::body::Incoming;
-use hyper::header::HOST;
+use hyper::header::{HeaderValue, HOST};
 use hyper::service::service_fn;
 use hyper::{Request, Response, StatusCode};
 use hyper_util::rt::{TokioExecutor, TokioIo};
@@ -140,6 +140,12 @@ impl EdgeProxy {
             format!("{} {} HTTP/1.1\r\n", req.method(), path_and_query).as_bytes(),
         );
 
+        let host_val = req
+            .headers()
+            .get(hyper::header::HOST)
+            .and_then(|h| h.to_str().ok())
+            .unwrap_or(&target.host);
+
         for (k, v) in req.headers().iter() {
             if k != hyper::header::HOST {
                 req_bytes.extend_from_slice(k.as_str().as_bytes());
@@ -148,9 +154,9 @@ impl EdgeProxy {
                 req_bytes.extend_from_slice(b"\r\n");
             }
         }
-        req_bytes.extend_from_slice(format!("host: {}\r\n", target.host).as_bytes());
+        req_bytes.extend_from_slice(format!("host: {}\r\n", host_val).as_bytes());
         req_bytes.extend_from_slice(b"x-forwarded-for: 127.0.0.1\r\n");
-        req_bytes.extend_from_slice(b"x-forwarded-proto: http\r\n\r\n");
+        req_bytes.extend_from_slice(b"x-forwarded-proto: https\r\n\r\n");
 
         backend_stream.write_all(&req_bytes).await?;
 
@@ -262,14 +268,20 @@ impl EdgeProxy {
 
         let mut client_req = Request::builder().method(parts.method).uri(parts.uri);
 
+        let host_val = parts
+            .headers
+            .get(hyper::header::HOST)
+            .cloned()
+            .unwrap_or_else(|| HeaderValue::from_str(&target.host).unwrap());
+
         for (k, v) in parts.headers.iter() {
             if k != hyper::header::HOST {
                 client_req = client_req.header(k, v);
             }
         }
-        client_req = client_req.header(hyper::header::HOST, &target.host);
+        client_req = client_req.header(hyper::header::HOST, host_val);
         client_req = client_req.header("X-Forwarded-For", "127.0.0.1");
-        client_req = client_req.header("X-Forwarded-Proto", "http");
+        client_req = client_req.header("X-Forwarded-Proto", "https");
 
         let forward_req = client_req.body(Full::new(body_bytes))?;
         let res = sender.send_request(forward_req).await?;

@@ -389,6 +389,57 @@ async fn main() -> Result<()> {
                 }
             }
 
+            let reload_router = router.clone();
+            let reload_config_path = config_path.clone();
+
+            #[cfg(unix)]
+            {
+                if let Ok(mut hup_signal) =
+                    tokio::signal::unix::signal(tokio::signal::unix::SignalKind::hangup())
+                {
+                    tokio::spawn(async move {
+                        while hup_signal.recv().await.is_some() {
+                            println!("🔄 [MOS Edge] SIGHUP received: validating routes config...");
+                            if let Some(ref path) = reload_config_path {
+                                match std::fs::read_to_string(path) {
+                                    Ok(content) => match reload_router.load_from_json(&content) {
+                                        Ok(n) => {
+                                            println!("  ✅ [MOS Edge] Route validation passed. Reloaded {} routes with zero downtime.", n);
+                                            for d in reload_router.list_domains() {
+                                                if let Some(entry) =
+                                                    reload_router.inspect_routes(&d)
+                                                {
+                                                    println!(
+                                                        "    ↳ [{}] -> {}:{}",
+                                                        d,
+                                                        entry.stable.target.host,
+                                                        entry.stable.target.port
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!("  ❌ [MOS Edge] Route validation failed! Config rejected, existing routes preserved: {}", e);
+                                        }
+                                    },
+                                    Err(e) => {
+                                        eprintln!(
+                                            "  ❌ [MOS Edge] Failed reading config {}: {}",
+                                            path.display(),
+                                            e
+                                        );
+                                    }
+                                }
+                            } else {
+                                eprintln!(
+                                    "  ⚠️ [MOS Edge] No route config path configured for reload"
+                                );
+                            }
+                        }
+                    });
+                }
+            }
+
             let proxy = std::sync::Arc::new(mos_edge::proxy::EdgeProxy::new(router, None));
 
             // Check and spawn TLS server if certificates are available
